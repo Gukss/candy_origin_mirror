@@ -6,6 +6,7 @@ import com.project.candy.util.BaseTimeEntity;
 import lombok.*;
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 /**
  * packageName    : com.project.candy.beer.entity
@@ -56,11 +57,16 @@ public class Beer extends BaseTimeEntity {
     @NotBlank
     private double overall;
 
+    @NotBlank
+    @Column(length = 511)
+    private String beerImage;
+
     @JoinColumn(name = "country_id")
     @ManyToOne(fetch = FetchType.LAZY)
+    @NotNull
     private Country country;
 
     @Embedded
-    @NotBlank
+    @NotNull
     private BaseEntity baseEntity;
 }
