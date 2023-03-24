@@ -10,21 +10,16 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@Getter
-public class ReadCalendarResponse {
-  private String created_at;
+/**
+ * packageName    : com.project.candy.calendar.dto
+ * fileName       : CreateUserRequest
+ * date           : 2023-03-20
+ * description    : calendar 조회시에 , native query를 이용해
+ * 조건에 맞는 컬럼을 찾을땐 새로 Interface를 통해 리턴한다.
+ */
 
-  /**
-   *  Calendar 변수를 인자로 받아 , ReadCountryResponse type으로 리턴하는 메소드
-   */
-  static  public ReadCalendarResponse EntitytoDTO(Calendar calendar){
-    return ReadCalendarResponse.builder()
-            .created_at(DateTimeFormatter.ofPattern("yyyy-MM-dd").format(calendar.getCreatedAt()))
-            .build();
-  }
 
+public interface ReadCalendarResponse {
+  String getCreatedAt();
 
 }

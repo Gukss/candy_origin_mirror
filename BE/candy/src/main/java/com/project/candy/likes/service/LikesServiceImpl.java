@@ -1,11 +1,12 @@
-package com.project.candy.like.service;
+package com.project.candy.likes.service;
 
 import com.project.candy.beer.entity.Beer;
 import com.project.candy.beer.repository.BeerRepository;
 import com.project.candy.exception.exceptionMessage.NotFoundExceptionMessage;
-import com.project.candy.like.entity.Like;
-import com.project.candy.like.entity.LikeId;
-import com.project.candy.like.repository.LikeRepository;
+import com.project.candy.likes.dto.ReadLikesListByUserResponse;
+import com.project.candy.likes.entity.Likes;
+import com.project.candy.likes.entity.LikesId;
+import com.project.candy.likes.repository.LikesRepository;
 import com.project.candy.user.entity.User;
 import com.project.candy.user.repository.UserRepository;
 import com.project.candy.util.BaseEntity;
@@ -13,6 +14,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * packageName    : com.project.candy.like.service
@@ -24,11 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class LikeServiceImpl implements LikeService {
+public class LikesServiceImpl implements LikesService {
 
   private final UserRepository userRepository;
   private final BeerRepository beerRepository;
-  private final LikeRepository likeRepository;
+  private final LikesRepository likeRepository;
 
   @Override
   @Transactional
@@ -40,8 +44,8 @@ public class LikeServiceImpl implements LikeService {
     Beer beer = beerRepository.findById(beerId).orElseThrow(() -> new NotFoundExceptionMessage());
 
     // 찜하기 정보 생성
-    Like like = Like.builder()
-            .likeId(new LikeId(user.getId(), beerId))
+    Likes likes = Likes.builder()
+            .likeId(new LikesId(user.getId(), beerId))
             .user(user)
             .beer(beer)
             .baseEntity(BaseEntity.builder()
@@ -53,13 +57,13 @@ public class LikeServiceImpl implements LikeService {
 
     // 찜했다가 해제한 후 다시 찜하는 경우 고려
     // upsert 사용 필요
-    Like createLike = likeRepository.findByUserAndBeer(user, beer).orElse(like);
-    if (createLike.getBaseEntity().isDelete()) {
-      createLike.getBaseEntity().create();
+    Likes createLikes = likeRepository.findByUserAndBeer(user, beer).orElse(likes);
+    if (createLikes.getBaseEntity().isDelete()) {
+      createLikes.getBaseEntity().create();
       return;
     }
     // 찜하기 저장
-    likeRepository.save(createLike);
+    likeRepository.save(createLikes);
   }
 
   @Override
@@ -69,8 +73,31 @@ public class LikeServiceImpl implements LikeService {
     User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new NotFoundExceptionMessage());
     Beer beer = beerRepository.findById(beerId).orElseThrow(() -> new NotFoundExceptionMessage());
 
-    Like like = likeRepository.findByUserAndBeer(user, beer).orElseThrow(() -> new NotFoundExceptionMessage());
+    Likes likes = likeRepository.findByUserAndBeer(user, beer).orElseThrow(() -> new NotFoundExceptionMessage());
     // 삭제
-    like.getBaseEntity().delete();
+    likes.getBaseEntity().delete();
+  }
+
+  @Override
+  public List<ReadLikesListByUserResponse> readAllLikesListByUser(String userEmail) {
+
+    User user = userRepository.findByEmail(userEmail)
+            .orElseThrow(() -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_USER));
+
+    List<Likes> likeList = likeRepository.readAllLikesListByUserAndIsDeleteFalse(user.getId());
+
+    if (!likeList.isEmpty() && likeList != null) {
+      List<ReadLikesListByUserResponse> likesBeerList = new ArrayList<>();
+
+      for (Likes like : likeList) {
+        Beer beer = like.getBeer();
+        likesBeerList.add(new ReadLikesListByUserResponse(beer.getBeerKrName(), beer.getBeerEnName(), beer.getBeerImage()));
+      }
+
+      return likesBeerList;
+    }
+
+    // todo : 메세지 정의하기
+    throw new NotFoundExceptionMessage();
   }
 }

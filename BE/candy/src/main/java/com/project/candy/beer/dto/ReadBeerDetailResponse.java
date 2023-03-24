@@ -16,13 +16,14 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
 public class ReadBeerDetailResponse {
+
+  private long beerId;
 
   private String beerKrName;
 
   private String beerEnName;
-
-  private String countryImageUrl;
 
   private String countryKrName;
 
@@ -48,6 +49,7 @@ public class ReadBeerDetailResponse {
 
   public static ReadBeerDetailResponse EntityToDTO(Beer beer, ReadCountryResponse readCountryResponse) {
     return ReadBeerDetailResponse.builder()
+            .beerId(beer.getId())
             .abv(beer.getAbv())
             .appearance(beer.getAppearance())
             .aroma(beer.getAroma())
@@ -57,7 +59,6 @@ public class ReadBeerDetailResponse {
             .beerKrName(beer.getBeerKrName())
             .beerEnName(beer.getBeerEnName())
             .style(beer.getStyle())
-            .countryImageUrl(readCountryResponse.getCountryImage())
             .countryKrName(readCountryResponse.getCountryKrName())
             .countryEnName(readCountryResponse.getCountryEnName())
             .build();
