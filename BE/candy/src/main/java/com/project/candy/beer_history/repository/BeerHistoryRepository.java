@@ -6,11 +6,16 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import com.project.candy.beer_history.entity.BeerHistoryId;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
 /**
  * packageName    : com.project.candy.beer_history.repository fileName       : BeerHistoryRepository
  * date           : 2023-03-24 description    :
  */
 public interface BeerHistoryRepository extends JpaRepository<BeerHistory, Long> {
+  Optional<BeerHistory> findByBeerHistoryId(BeerHistoryId beerHistoryId);
   @Query("select bh from BeerHistory bh join fetch bh.beer")
   List<BeerHistory> findAllByUser();
 }
