@@ -51,7 +51,11 @@ public class Statistics extends BaseTimeEntity {
     @NotBlank
     private BaseEntity baseEntity;
 
-    public void setUser(User user) {
-        this.user = user;
+    public void updateStatistics (int totalCount, int continuousDay, String favoriteStyle, double topRank, int totalDay){
+        this.totalCount = totalCount;
+        this.continuousDay = continuousDay;
+        this.favoriteStyle = favoriteStyle;
+        this.topRank = topRank;
+        this.totalDay = totalDay;
     }
 }
