@@ -1,5 +1,6 @@
 package com.project.candy.beer.service;
 
+import com.project.candy.beer.dto.ReadBeerAvgFromReviewResponse;
 import com.project.candy.beer.dto.ReadBeerDetailResponse;
 import com.project.candy.beer.dto.ReadBeerListResponse;
 import com.project.candy.beer.dto.ReadSearchBeerListResponse;
@@ -11,16 +12,22 @@ import com.project.candy.country.dto.ReadCountryResponse;
 import com.project.candy.country.entity.Country;
 import com.project.candy.country.repository.CountryRepository;
 import com.project.candy.exception.exceptionMessage.NotFoundExceptionMessage;
-import com.project.candy.likes.dto.ReadLikesListByUserResponse;
 import com.project.candy.likes.entity.Likes;
 import com.project.candy.likes.repository.LikesRepository;
+import com.project.candy.review.entity.Review;
+import com.project.candy.review.repository.ReviewRepository;
 import com.project.candy.user.entity.User;
 import com.project.candy.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -42,17 +49,20 @@ public class BeerServiceImpl implements BeerService {
   private final CountryRepository countryRepository;
   private final CalendarRepository calendarRepository;
   private final LikesRepository likeRepository;
+  private final ReviewRepository reviewRepository;
+  private final JdbcTemplate jdbcTemplate;
 
   @Override
   public ReadBeerDetailResponse readBeerDetail(Long beerId, String userEmail) {
     // 상세 정보에 들어갈 맥주 정보
-    Beer beer = beerRepository.findById(beerId).orElseThrow(() -> new NotFoundExceptionMessage());
+    Beer beer = beerRepository.findById(beerId).orElseThrow(
+            () -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_BEER));
     // 상세 정보에 들어갈 나라 정보 (한글/영문 이름, 이미지 url)
     //todo: 예외 메시지 바꾸기
     Country foundCountry = countryRepository.findById(beer.getCountry().getId()).orElseThrow(() -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_BEER));
     ReadCountryResponse readCountryResponse = ReadCountryResponse.entityToDTO(foundCountry);
     // 위 두 정보를 리턴 DTO에 넣어준다.
-    ReadBeerDetailResponse readBeerDetailResponse = ReadBeerDetailResponse.EntityToDTO(beer, readCountryResponse);
+    ReadBeerDetailResponse readBeerDetailResponse = ReadBeerDetailResponse.entityToDTO(beer, readCountryResponse);
 
     // 현재 요청을 보낸 사용자가 해당 맥주를 마셨는지, 찜했는지 판단하기 위해 사용자 정보를 불러온다.
     User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new NotFoundExceptionMessage());
@@ -89,8 +99,9 @@ public class BeerServiceImpl implements BeerService {
 
   @Override
   public List<ReadSearchBeerListResponse> readAllSearchBeerList(String beerName) {
-
+    log.info("확인하자!!!" + beerName);
     boolean isKorean = Pattern.matches("^[ㄱ-ㅎ가-힣]*$", beerName);
+    log.info("김영만" + isKorean);
     List<Beer> beerList = new ArrayList<>();
     if (isKorean) {
       beerList = beerRepository.findAllByBeerKrNameContaining(beerName);
@@ -111,11 +122,56 @@ public class BeerServiceImpl implements BeerService {
   @Override
   public ReadBeerDetailResponse readBeerDetailByBarcode(String barcode, String userEmail) {
 
-    Beer beer = beerRepository.findByBarcode(barcode).orElseThrow(
-            () -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_BEER));
+    Beer beer = beerRepository.findByBarcode(barcode).orElse(null);
 
+    if (beer == null) {
+      return null;
+    }
     ReadBeerDetailResponse resBeerDetail = readBeerDetail(beer.getId(), userEmail);
-
     return resBeerDetail;
+  }
+
+  @Override
+  @Scheduled(cron = "0 0 4 1/1 * *")
+  @Transactional
+  public void updateBeer() {
+
+    // 1. 리뷰 테이블 row를 모두 가져온다.
+    // 1-1. 단 삭제되지 않은 정보만 가져와야 한다.
+    // 2. 모든 리뷰에서 연산할 값들을 연산해준다. -> roll up 쿼리로 해결
+    // 3. JDBC Batch를 이용해 db에 한번에 업데이트 해준다.
+
+    List<Review> reviewList = reviewRepository.readAllIsDeleteFalse();
+    if (reviewList != null && !reviewList.isEmpty()) {
+
+      List<ReadBeerAvgFromReviewResponse> beerAvgList = beerRepository.readAllBeerAvgList();
+      if (beerAvgList != null && !beerAvgList.isEmpty()) {
+        batchUpdate(beerAvgList);
+      }
+    }
+  }
+
+  /**
+   * updateBeer() 메소드에서 배치 처리를 위해 호출하는 메소드
+   *
+   * @param beerAvgList
+   */
+  public void batchUpdate(List<ReadBeerAvgFromReviewResponse> beerAvgList) {
+    jdbcTemplate.batchUpdate("update test set " +
+                    "test.aroma = ?, test.flavor = ?, test.mouthfeel = ?, " +
+                    "test.appearance = ?, test.overall = ? where test.beer_id = ?",
+            beerAvgList,
+            beerAvgList.size(),
+            new ParameterizedPreparedStatementSetter<ReadBeerAvgFromReviewResponse>() {
+              @Override
+              public void setValues(PreparedStatement ps, ReadBeerAvgFromReviewResponse beerAvg) throws SQLException {
+                ps.setDouble(1, beerAvg.getAromaAvg());
+                ps.setDouble(2, beerAvg.getFlavorAvg());
+                ps.setDouble(3, beerAvg.getMouthfeelAvg());
+                ps.setDouble(4, beerAvg.getAppearanceAvg());
+                ps.setDouble(5, beerAvg.getOverallAvg());
+                ps.setLong(6, beerAvg.getBeerId());
+              }
+            });
   }
 }

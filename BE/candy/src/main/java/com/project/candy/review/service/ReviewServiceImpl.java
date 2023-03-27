@@ -6,6 +6,7 @@ import com.project.candy.exception.exceptionMessage.NotFoundExceptionMessage;
 import com.project.candy.review.dto.CreateReviewRequest;
 import com.project.candy.review.dto.ReadReviewResponse;
 import com.project.candy.review.entity.Review;
+import com.project.candy.review.repository.ReviewLikeRepository;
 import com.project.candy.review.repository.ReviewRepository;
 import com.project.candy.user.entity.User;
 import com.project.candy.user.repository.UserRepository;
@@ -30,11 +31,13 @@ public class ReviewServiceImpl implements ReviewService {
   private final UserRepository userRepository;
   private final ReviewRepository reviewRepository;
 
+  private final ReviewLikeRepository reviewLikeRepository;
+
   @Override
   @Transactional
   // 하나의 맥주에 대해 사용자는 하나의 리뷰만 만들 수 있다.
-  public boolean CreateReview(long beerId, CreateReviewRequest createReviewRequest) {
-    User user=userRepository.findByEmail(createReviewRequest.getUserEmail())
+  public boolean CreateReview(String userEmail,long beerId, CreateReviewRequest createReviewRequest) {
+    User user=userRepository.findByEmail(userEmail)
         .orElseThrow(() -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_USER));
 
     Beer beer=beerRepository.findById(beerId)
@@ -51,9 +54,12 @@ public class ReviewServiceImpl implements ReviewService {
   }
 
   @Override
-  public List<ReadReviewResponse> ReadAllReview(long beerId) {
+  public List<ReadReviewResponse> ReadAllReview(long beerId,String userEmail) {
     Beer beer = beerRepository.findById(beerId)
         .orElseThrow(() -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_BEER));
+
+    User LoginUser=userRepository.findByEmail(userEmail)
+        .orElseThrow(() -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_USER));
 
     List<ReadReviewResponse> reviewList =reviewRepository.findAllByBeer(beer).stream().map(review -> {
 
@@ -61,7 +67,11 @@ public class ReviewServiceImpl implements ReviewService {
       User user=userRepository.findById(userId)
           .orElseThrow(() -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_USER));
 
-      ReadReviewResponse response=ReadReviewResponse.EntityToDto(user,review);
+      int reviewLikeCount = reviewLikeRepository.findAllByReview(review).stream().filter(reviewLike -> reviewLike.getBaseEntity().isDelete()==false).collect(Collectors.toList()).size();
+
+      boolean isLikes= reviewLikeRepository.findByUserAndReview(LoginUser,review).isPresent();
+
+      ReadReviewResponse response=ReadReviewResponse.EntityToDto(user,review,reviewLikeCount,isLikes);
 
       return response;
     }).collect(Collectors.toList());
