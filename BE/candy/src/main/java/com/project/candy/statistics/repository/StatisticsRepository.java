@@ -1,5 +1,6 @@
 package com.project.candy.statistics.repository;
 
+import com.project.candy.statistics.dto.ContinuousDay;
 import com.project.candy.statistics.dto.PercentRank;
 import com.project.candy.statistics.entity.Statistics;
 import com.project.candy.user.entity.User;
@@ -18,22 +19,25 @@ import org.springframework.data.repository.query.Param;
 public interface StatisticsRepository extends JpaRepository<Statistics, Long> {
    Optional<Statistics> findByUser(User user);
 
-   @Query(nativeQuery = true, value = "select sum(target.count) sum" +
-           "from (select *" +
-           "      from beer_history b" +
-           "      where user_id = :user_id" +
-           ") target")
+   @Query(nativeQuery = true, value = "select case\n"
+       + "    when sum(target.count) is null\n"
+       + "    then 0\n"
+       + "    else sum(target.count)\n"
+       + "end sum\n"
+       + "           from (select *\n"
+       + "                 from beer_history b\n"
+       + "                 where user_id = :user_id)target")
    int readTotalCountByUserEmail(@Param("user_id") long userId);
 
-   @Query(nativeQuery = true, value = "select distinct(date_format(c.created_at, '%Y-%m-%d')) date" +
-           "from calendar c" +
-           "where user_id = :user_id" +
-           "order by date desc")
-   List<LocalDate> readCalendar(@Param("user_id") long userId);
+   @Query(nativeQuery = true, value = "select distinct(STR_TO_DATE(date_format(c.created_at, '%Y-%m-%d'), '%Y-%m-%d')) continuousDay\n"
+       + "           from calendar c\n"
+       + "           where user_id = :user_id\n"
+       + "           order by continuousDay desc")
+   List<ContinuousDay> readCalendar(@Param("user_id") long userId);
 
-   @Query(nativeQuery = true, value = "select b.user_id" +
-           "     , 100-percent_rank() over(order by sum(b.count))*100 percent, sum(b.count) count" +
-           "from beer_history b" +
+   @Query(nativeQuery = true, value = "select b.user_id as userId " +
+           "     , 100-percent_rank() over(order by sum(b.count))*100 percent, sum(b.count) count " +
+           "from beer_history b " +
            "group by b.user_id")
    List<PercentRank> readPercentRank();
 }

@@ -16,22 +16,10 @@ import lombok.NoArgsConstructor;
  * -----------------------------------------------------------
  * 2023-03-26        dongk       최초 생성
  */
-@Getter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class PercentRank {
-  private long userId;
+public interface PercentRank {
+  Long getUserId();
 
-  private double percent;
+  Double getPercent();
 
-  private long count;
-
-  public static PercentRank createPercentRank(long userId, double percent, long count){
-    return PercentRank.builder()
-            .userId(userId)
-            .percent(percent)
-            .count(count)
-            .build();
-  }
+  Long getCount();
 }
