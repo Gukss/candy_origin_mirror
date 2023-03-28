@@ -1,5 +1,7 @@
 package com.project.candy.recommendation.controller;
 
+import com.project.candy.recommendation.dto.ReadCanndyRecommendationResponse;
+import com.project.candy.recommendation.dto.RecReadCandyRecommendationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,19 +26,29 @@ public class RecommendationController {
   @Autowired
   private WebClient webClient;
 
-  public String readCandyRecommendationByEmail(String email){
+  public RecReadCandyRecommendationResponse readCandyRecommendationByEmail(String email, String endPoint){
     return webClient.get()
 //        .uri("/candy")
-        .uri("/1")
+        .uri("/"+endPoint)
+        .header("email", email)
         .retrieve()
-        .bodyToMono(String.class)
+        .bodyToMono(RecReadCandyRecommendationResponse.class)
         .block();
   }
 
   @GetMapping("/candy")
-  public ResponseEntity<?> readCandyRecommendation(@RequestHeader(value = "email") String email){
-    String s = readCandyRecommendationByEmail("ac@naver.com");
-    log.info(s);
+  public ResponseEntity<ReadCanndyRecommendationResponse> readCandyRecommendation(@RequestHeader(value = "email") String email){
+    RecReadCandyRecommendationResponse recReadCandyRecommendationResponse = readCandyRecommendationByEmail(
+        "ac@naver.com", "candy");
+    log.info(recReadCandyRecommendationResponse.toString());
+    return null;
+  }
+
+  @GetMapping("/style")
+  public ResponseEntity<ReadCanndyRecommendationResponse> readStyleRecommendation(@RequestHeader(value = "email") String email){
+    RecReadCandyRecommendationResponse recReadCandyRecommendationResponse = readCandyRecommendationByEmail(
+        "ac@naver.com", "style");
+    log.info(recReadCandyRecommendationResponse.toString());
     return null;
   }
 }
