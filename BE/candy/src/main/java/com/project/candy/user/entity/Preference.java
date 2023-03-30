@@ -55,10 +55,12 @@ public class Preference extends BaseTimeEntity {
   private BaseEntity baseEntity;
 
   public static Preference create(User user, CreatePreferenceRequest createPreferenceRequest){
-          .appearance(createPreferenceRequest.getApperance())
+      Preference preference=Preference.builder()
+          .user(user)
+          .appearance(createPreferenceRequest.getAppearance())
           .aroma(createPreferenceRequest.getAroma())
           .flavor(createPreferenceRequest.getFlavor())
-          .mouthfeel(createPreferenceRequest.getMouthfell())
+          .mouthfeel(createPreferenceRequest.getMouthfeel())
           .baseEntity(BaseEntity.builder()
               .constructor(user.getEmail())
               .isDelete(false)
