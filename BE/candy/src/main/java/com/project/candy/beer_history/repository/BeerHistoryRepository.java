@@ -23,6 +23,6 @@ public interface BeerHistoryRepository extends JpaRepository<BeerHistory, Long> 
   @Query(nativeQuery = true, value = "select * "
       + "from beer_history "
       + "where user_id = :user_id "
-      + "order by created_at")
+      + "order by created_at desc")
   List<BeerHistory> findAllByUserOrderByCreatedAtDesc(@Param("user_id")Long userId);
 }
