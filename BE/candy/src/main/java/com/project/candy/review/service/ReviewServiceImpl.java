@@ -2,15 +2,20 @@ package com.project.candy.review.service;
 
 import com.project.candy.beer.entity.Beer;
 import com.project.candy.beer.repository.BeerRepository;
+import com.project.candy.beer_history.service.BeerHistoryServiceImpl;
+import com.project.candy.calendar.repository.CalendarRepository;
+import com.project.candy.calendar.service.CalendarServiceImpl;
 import com.project.candy.exception.exceptionMessage.NotFoundExceptionMessage;
 import com.project.candy.review.dto.CreateReviewRequest;
 import com.project.candy.review.dto.ReadReviewResponse;
 import com.project.candy.review.entity.Review;
+import com.project.candy.review.entity.ReviewLike;
 import com.project.candy.review.repository.ReviewLikeRepository;
 import com.project.candy.review.repository.ReviewRepository;
 import com.project.candy.user.entity.User;
 import com.project.candy.user.repository.UserRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +35,6 @@ public class ReviewServiceImpl implements ReviewService {
   private final BeerRepository beerRepository;
   private final UserRepository userRepository;
   private final ReviewRepository reviewRepository;
-
   private final ReviewLikeRepository reviewLikeRepository;
 
   @Override
@@ -61,15 +65,19 @@ public class ReviewServiceImpl implements ReviewService {
     User LoginUser=userRepository.findByEmail(userEmail)
         .orElseThrow(() -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_USER));
 
-    List<ReadReviewResponse> reviewList =reviewRepository.findAllByBeer(beer).stream().map(review -> {
-
+//    List<ReadReviewResponse> reviewList =reviewRepository.findAllByBeer(beer).stream().map(review -> {
+      List<ReadReviewResponse> reviewList =reviewRepository.findAllByBeerIdAndUpdaterNot(beerId , "admin@admin.com").stream().map(review -> {
       long userId=review.getUser().getId();
       User user=userRepository.findById(userId)
           .orElseThrow(() -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_USER));
 
       int reviewLikeCount = reviewLikeRepository.findAllByReview(review).stream().filter(reviewLike -> reviewLike.getBaseEntity().isDelete()==false).collect(Collectors.toList()).size();
 
-      boolean isLikes= reviewLikeRepository.findByUserAndReview(LoginUser,review).isPresent();
+      Optional<ReviewLike> reviewLikeEntity = reviewLikeRepository.findByUserAndReview(LoginUser, review);
+      boolean isLikes= reviewLikeEntity.isPresent() ;
+      if(isLikes){
+        isLikes = (reviewLikeEntity.get().getBaseEntity().isDelete() == true )?false :true ;
+      }
 
       ReadReviewResponse response=ReadReviewResponse.EntityToDto(user,review,reviewLikeCount,isLikes);
 

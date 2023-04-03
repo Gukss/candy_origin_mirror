@@ -1,6 +1,8 @@
 from flask import Flask ,   request # 서버 구현을 위한 Flask 객체 import
 from flask_restx import Api, Resource  # Api 구현을 위한 Api 객체 import
 from apscheduler.schedulers.background import BackgroundScheduler
+import datetime
+from pytz import timezone
 import model
 import logging 
 import pymysql
@@ -14,10 +16,11 @@ def recommend_and_schedule():
 
 def make_log():
     logger.info("hello world!")
-    print("5초마다 확인! ")
+    
 
 # schedule.add_job(recommend_and_schedule, 'cron', week='1-53', day_of_week='0-6', hour='4')
-schedule.add_job(make_log, 'cron', week='1-53', day_of_week='0-6', second='5,15,25')
+schedule.add_job(recommend_and_schedule, 'cron', week='1-53', day_of_week='0-6',minute='30')
+schedule.add_job(make_log, 'cron', week='1-53', day_of_week='0-6', hour='1-23')
 
 schedule.start()
 
@@ -25,6 +28,17 @@ schedule.start()
 class HelloWorld(Resource):
     def get(self):  # GET 요청시 리턴 값에 해당 하는 dict를 JSON 형태로 반환
         return {"hello": "world!"}
+
+@api.route('/checkTime')  # 데코레이터 이용, '/hello' 경로에 클래스 등록
+class HelloWorld(Resource):
+    def get(self):  # GET 요청시 리턴 값에 해당 하는 dict를 JSON 형태로 반환
+        return {"curTime": str(datetime.datetime.now(timezone('Asia/Seoul')))}
+
+@api.route('/make')  # 데코레이터 이용, '/hello' 경로에 클래스 등록
+class HelloWorld(Resource):
+    def get(self):  # GET 요청시 리턴 값에 해당 하는 dict를 JSON 형태로 반환
+        model.recommend_flow()
+        return {"result": "추천이 완료되었습니다"}
 
 @api.route('/reccomand')
 class ReccomandBeer(Resource):
