@@ -127,6 +127,7 @@ public class StatisticsServiceImpl implements StatisticsService {
       sumStylePercent += stylePercent;
       pieStyleList.add(new Pie(style, stylePercent));
     }
+    // todo :
     for (int i = 0; i < countrySize; i++) {
       Order countryCur = countryPq.poll();
       String country = countryCur.string;
@@ -217,8 +218,8 @@ public class StatisticsServiceImpl implements StatisticsService {
   }
 
   @Override
-  @Scheduled(cron = "0 0 4 1/1 * *", zone = "Asia/Seoul")
-//  @Scheduled(cron = "1/1 * * * * *", zone = "Asia/Seoul")
+//  @Scheduled(cron = "0 0 4 1/1 * *", zone = "Asia/Seoul")
+  @Scheduled(cron = "0 10/10 * * * *", zone = "Asia/Seoul")
   @Transactional
   public void createStatisticsScheduled() {
     //전체 유저 모두 처리해줘야 한다.
