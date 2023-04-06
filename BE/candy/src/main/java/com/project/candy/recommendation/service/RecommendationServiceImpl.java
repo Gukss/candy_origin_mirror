@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -76,7 +77,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     // 추천된 데이터가 들어가 있는 rdb에서 해당 유저의 추천 데이터를 받아온다.
     LocalDateTime startTime = LocalDateTime.now().minusDays(1);
     LocalDateTime endTime = LocalDateTime.now();
-    RecommendationCandy recommendationCandy = recommendationCandyRepository.findByUserAndCreatedAtBetween(user, startTime, endTime)
+    RecommendationCandy recommendationCandy = recommendationCandyRepository.findTop1ByUserAndCreatedAtBetweenOrderByCreatedAtDesc(user, startTime, endTime)
             .orElseThrow(() -> new NotFoundExceptionMessage(NotFoundExceptionMessage.NOT_FOUND_USER));
     if (recommendationCandy == null) {
       // todo : 에러 메세지 정의하기
@@ -148,7 +149,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     LocalDateTime startTime = LocalDateTime.now().minusDays(1);
     LocalDateTime endTime = LocalDateTime.now();
     RecommendationSimilarity recommendationSimilarity =
-            recommendationSimilarityRepository.findByBeerIdAndCreatedAtBetween(beerId, startTime, endTime);
+            recommendationSimilarityRepository.findTop1ByBeerIdAndCreatedAtBetweenOrderByCreatedAtDesc(beerId, startTime, endTime);
     if (recommendationSimilarity == null) {
       // todo : 에러 메세지 정의하기
       throw new NotFoundExceptionMessage();
@@ -192,6 +193,8 @@ public class RecommendationServiceImpl implements RecommendationService {
       return resReviewList;
     }
 
+    Collections.sort(reviewCacheList);
+
     // 캐시에 데이터가 있다면 Response DTO 형식으로 변환 후 리턴
     List<ReadReviewRecommendationResponse> resReviewCacheList = new ArrayList<>();
     for (ReviewCache reviewCache : reviewCacheList) {
@@ -205,7 +208,7 @@ public class RecommendationServiceImpl implements RecommendationService {
   public List<ReadReviewRecommendationResponse> readReviewByRdbAndCreateCache(String userEmail) {
 
     // rdb 조회해서 리뷰 추천 데이터(리뷰 좋아요 많이 받은 순서로 정렬한 데이터) 뽑아오기
-    LocalDateTime startTime = LocalDateTime.now().minusDays(1);
+    LocalDateTime startTime = LocalDateTime.now().minusWeeks(1);
     LocalDateTime endTime = LocalDateTime.now();
     List<Review> reviewList = reviewRepository.findTop10ByCreatedAtBetweenOrderByLikeCountDesc(startTime, endTime);
 
